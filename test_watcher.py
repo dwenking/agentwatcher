@@ -52,6 +52,8 @@ def test_prompt_snippet():
     assert watcher._prompt_snippet("fix the bug\nmore detail") == "fix the bug"
     assert watcher._prompt_snippet([{"type": "text", "text": "hello"}]) == "hello"
     assert watcher._prompt_snippet("<bash-input>ls</bash-input>") == ""
+    assert watcher._prompt_snippet("[Request interrupted by user]") == ""
+    assert watcher._prompt_snippet("[Image #1] why is this slow") == "why is this slow"
     assert watcher._prompt_snippet("x" * 50) == "x" * 40 + "…"
 
 

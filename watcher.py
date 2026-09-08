@@ -103,8 +103,10 @@ def _prompt_snippet(content, limit=40):
                         if isinstance(b, dict) and b.get("type") == "text"), "")
     if not isinstance(content, str):
         return ""
-    text = content.strip()
-    if not text or text.startswith(("<", "[")):
+    # drop leading tags like "[Image #1]"; pure system text ("[Request
+    # interrupted by user]", "<bash-input>…") reduces to nothing and is skipped
+    text = re.sub(r"^(\[[^\]]*\]\s*)+", "", content.strip())
+    if not text or text.startswith("<"):
         return ""
     text = text.splitlines()[0]
     return text[:limit] + ("…" if len(text) > limit else "")
