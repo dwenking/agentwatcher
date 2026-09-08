@@ -120,7 +120,16 @@ def scan_claude(sessions, idle_s):
                 r = json.loads(line)
             except ValueError:
                 continue
-            if r.get("isSidechain") or r.get("isMeta") or r.get("type") not in ("user", "assistant"):
+            t = r.get("type")
+            # "last-prompt" reflects the newest typed prompt even while it is
+            # still queued behind a running turn (no user record exists yet).
+            if t == "last-prompt":
+                s.title = _prompt_snippet(r.get("lastPrompt")) or s.title
+                continue
+            if t == "queue-operation" and r.get("timestamp"):
+                s.last_activity = max(s.last_activity, _iso(r["timestamp"]))
+                continue
+            if r.get("isSidechain") or r.get("isMeta") or t not in ("user", "assistant"):
                 continue
             ts = r.get("timestamp")
             if not ts:
