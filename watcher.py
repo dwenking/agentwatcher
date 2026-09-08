@@ -230,9 +230,11 @@ def main():
             med = statistics.median(s.latencies) if s.latencies else 0
             last = s.latencies[-1] if s.latencies else 0
             title = f" “{s.title}”" if s.title else ""
+            # menu items without a callback render disabled (grey) on macOS
             items.append(rumps.MenuItem(
                 f"{EMOJI[h]} {s.tool} ({s.label}){title} — last {last:.0f}s,"
-                f" med {med:.0f}s, {strikes(s, cfg)} strikes"))
+                f" med {med:.0f}s, {strikes(s, cfg)} strikes",
+                callback=lambda _: None))
         app.title = EMOJI[worst]
         app.menu.clear()
         app.menu = items + [None] if items else [rumps.MenuItem("no active sessions"), None]
