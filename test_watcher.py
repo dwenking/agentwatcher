@@ -48,11 +48,11 @@ def test_external_strikes_count():
     assert watcher.health(s, CFG) == "red"
 
 
-def test_alert_fires_once_per_session():
-    s = _session([10] * 5 + [40, 40])
-    assert watcher.should_alert(s, CFG) is True
-    s.alerted = True
-    assert watcher.should_alert(s, CFG) is False
+def test_prompt_snippet():
+    assert watcher._prompt_snippet("fix the bug\nmore detail") == "fix the bug"
+    assert watcher._prompt_snippet([{"type": "text", "text": "hello"}]) == "hello"
+    assert watcher._prompt_snippet("<bash-input>ls</bash-input>") == ""
+    assert watcher._prompt_snippet("x" * 50) == "x" * 40 + "…"
 
 
 def test_claude_turn_latencies_from_events():

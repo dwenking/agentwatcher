@@ -1,4 +1,4 @@
-"""Menu bar watcher: alerts when an AI coding session degrades.
+"""Menu bar watcher: shows health of active AI coding sessions.
 
 Surfaces: Claude Code (CLI + Cursor) via ~/.claude/projects transcripts,
 Codex (CLI + Cursor) via ~/.codex/sessions rollouts + logs_2.sqlite errors.
@@ -11,7 +11,6 @@ import os
 import re
 import sqlite3
 import statistics
-import subprocess
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -29,9 +28,9 @@ class Session:
     tool: str
     label: str
     use_latency_strikes: bool = True
+    title: str = ""
     latencies: list = field(default_factory=list)
     external_strikes: int = 0
-    alerted: bool = False
     last_activity: float = 0.0
     offset: int = 0
     events: list = field(default_factory=list)
@@ -74,10 +73,6 @@ def health(s, cfg):
     return "yellow" if n else "green"
 
 
-def should_alert(s, cfg):
-    return health(s, cfg) == "red" and not s.alerted
-
-
 # --- scanners ---------------------------------------------------------------
 
 def _iso(ts):
@@ -100,6 +95,20 @@ def _read_new_lines(s, path):
     return data.decode("utf-8", "replace").splitlines()
 
 
+def _prompt_snippet(content, limit=40):
+    """First line of a user prompt, skipping tool results and <command> wrappers."""
+    if isinstance(content, list):
+        content = next((b.get("text", "") for b in content
+                        if isinstance(b, dict) and b.get("type") == "text"), "")
+    if not isinstance(content, str):
+        return ""
+    text = content.strip()
+    if not text or text.startswith(("<", "[")):
+        return ""
+    text = text.splitlines()[0]
+    return text[:limit] + ("…" if len(text) > limit else "")
+
+
 def scan_claude(sessions, idle_s):
     for path in _recent_files(CLAUDE_GLOB, idle_s):
         s = sessions.get(path)
@@ -119,6 +128,8 @@ def scan_claude(sessions, idle_s):
                 ep = r.get("entrypoint", "cli")
                 s.tool = "Claude Code" + ("" if ep == "cli" else " (Cursor)")
                 s.label = os.path.basename(r.get("cwd", "") or "?")
+            if not s.title and r["type"] == "user":
+                s.title = _prompt_snippet(r.get("message", {}).get("content"))
             s.events.append({"type": r["type"], "ts": _iso(ts)})
             s.last_activity = max(s.last_activity, _iso(ts))
         s.latencies = pair_latencies(s.events)
@@ -147,6 +158,8 @@ def scan_codex(sessions, idle_s, err_window_s):
                 cwd = p.get("cwd")
                 if cwd:
                     s.label = os.path.basename(cwd) or cwd
+            elif t == "user_message" and not s.title:
+                s.title = _prompt_snippet(p.get("message"))
             elif t == "task_started" and ts:
                 starts[p.get("turn_id")] = ts
                 s.last_activity = max(s.last_activity, ts)
@@ -186,22 +199,6 @@ def _add_codex_db_errors(active, err_window_s):
 
 # --- app --------------------------------------------------------------------
 
-def notify(title, text):
-    subprocess.run(
-        ["osascript", "-e",
-         f'display notification "{text}" with title "{title}"'],
-        check=False,
-    )
-
-
-def alert_message(s, cfg):
-    n = strikes(s, cfg)
-    if s.use_latency_strikes and s.latencies:
-        return (f"{s.tool} ({s.label}): {n} turns ≥3× baseline "
-                f"({s.latencies[-1]:.0f}s). Fresh session will be faster.")
-    return f"{s.tool} ({s.label}): {n} errors/aborts recently. Fresh session will be faster."
-
-
 def main():
     import rumps
 
@@ -232,12 +229,10 @@ def main():
             worst = max(worst, h, key=["green", "yellow", "red"].index)
             med = statistics.median(s.latencies) if s.latencies else 0
             last = s.latencies[-1] if s.latencies else 0
+            title = f" “{s.title}”" if s.title else ""
             items.append(rumps.MenuItem(
-                f"{EMOJI[h]} {s.tool} ({s.label}) — last {last:.0f}s, med {med:.0f}s,"
-                f" {strikes(s, cfg)} strikes"))
-            if should_alert(s, cfg):
-                s.alerted = True
-                notify("session-watcher", alert_message(s, cfg))
+                f"{EMOJI[h]} {s.tool} ({s.label}){title} — last {last:.0f}s,"
+                f" med {med:.0f}s, {strikes(s, cfg)} strikes"))
         app.title = EMOJI[worst]
         app.menu.clear()
         app.menu = items + [None] if items else [rumps.MenuItem("no active sessions"), None]
