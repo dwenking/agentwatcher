@@ -1,0 +1,10 @@
+{
+  "poll_seconds": 5,
+  "baseline_turns": 5,
+  "strike_ratio": 3.0,
+  "strike_absolute_s": 90,
+  "strike_window": 5,
+  "alert_strikes": 2,
+  "idle_minutes": 30,
+  "codex_error_window_s": 300
+}
