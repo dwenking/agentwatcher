@@ -29,6 +29,7 @@ class Session:
     label: str
     use_latency_strikes: bool = True
     title: str = ""
+    hidden: bool = False  # subagent/sidechain threads: tracked but not displayed
     latencies: list = field(default_factory=list)
     external_strikes: int = 0
     last_activity: float = 0.0
@@ -153,6 +154,8 @@ def scan_codex(sessions, idle_s, err_window_s):
             t = p.get("type")
             ts = _iso(r["timestamp"]) if r.get("timestamp") else None
             if t == "turn_context" or r.get("type") == "session_meta":
+                if p.get("parent_thread_id"):
+                    s.hidden = True
                 if "codex_vscode" in line:
                     s.tool = "Codex (Cursor)"
                 cwd = p.get("cwd")
@@ -219,7 +222,8 @@ def main():
             return
         cutoff = time.time() - idle_s
         live = sorted(
-            (s for s in sessions.values() if s.last_activity >= cutoff),
+            (s for s in sessions.values()
+             if s.last_activity >= cutoff and not s.hidden),
             key=lambda s: -s.last_activity,
         )
         worst = "green"
