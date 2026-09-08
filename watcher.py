@@ -129,8 +129,8 @@ def scan_claude(sessions, idle_s):
                 ep = r.get("entrypoint", "cli")
                 s.tool = "Claude Code" + ("" if ep == "cli" else " (Cursor)")
                 s.label = os.path.basename(r.get("cwd", "") or "?")
-            if not s.title and r["type"] == "user":
-                s.title = _prompt_snippet(r.get("message", {}).get("content"))
+            if r["type"] == "user":
+                s.title = _prompt_snippet(r.get("message", {}).get("content")) or s.title
             s.events.append({"type": r["type"], "ts": _iso(ts)})
             s.last_activity = max(s.last_activity, _iso(ts))
         s.latencies = pair_latencies(s.events)
@@ -161,8 +161,8 @@ def scan_codex(sessions, idle_s, err_window_s):
                 cwd = p.get("cwd")
                 if cwd:
                     s.label = os.path.basename(cwd) or cwd
-            elif t == "user_message" and not s.title:
-                s.title = _prompt_snippet(p.get("message"))
+            elif t == "user_message":
+                s.title = _prompt_snippet(p.get("message")) or s.title
             elif t == "task_started" and ts:
                 starts[p.get("turn_id")] = ts
                 s.last_activity = max(s.last_activity, ts)
