@@ -12,6 +12,38 @@ EMOJI = {"green": "\U0001f7e2", "yellow": "\U0001f7e1", "red": "\U0001f534"}
 _NOOP = lambda _: None  # menu items without a callback render disabled on macOS
 
 
+def _attr_item(rumps, segments, plain):
+    """MenuItem from (text, style) segments; falls back to the plain string.
+    Styles: label (small dim), dim, value, bold, mono, green/orange/red."""
+    item = rumps.MenuItem(plain, callback=_NOOP)
+    try:
+        from AppKit import (NSColor, NSFont, NSFontAttributeName,
+                            NSFontWeightRegular, NSForegroundColorAttributeName,
+                            NSMutableAttributedString)
+        styles = {
+            "label": (NSFont.menuFontOfSize_(11), NSColor.secondaryLabelColor()),
+            "dim": (NSFont.menuFontOfSize_(12), NSColor.secondaryLabelColor()),
+            "value": (NSFont.menuFontOfSize_(13), NSColor.labelColor()),
+            "bold": (NSFont.boldSystemFontOfSize_(13), NSColor.labelColor()),
+            "mono": (NSFont.monospacedSystemFontOfSize_weight_(12, NSFontWeightRegular),
+                     NSColor.labelColor()),
+            "green": (NSFont.boldSystemFontOfSize_(13), NSColor.systemGreenColor()),
+            "orange": (NSFont.boldSystemFontOfSize_(13), NSColor.systemOrangeColor()),
+            "red": (NSFont.boldSystemFontOfSize_(13), NSColor.systemRedColor()),
+        }
+        out = NSMutableAttributedString.alloc().init()
+        for text, style in segments:
+            font, color = styles[style]
+            out.appendAttributedString_(
+                NSMutableAttributedString.alloc().initWithString_attributes_(
+                    text, {NSFontAttributeName: font,
+                           NSForegroundColorAttributeName: color}))
+        item._menuitem.setAttributedTitle_(out)
+    except Exception:
+        pass
+    return item
+
+
 def _native_row(item, chip, emoji_prefix, title, status_seg, age):
     """Two-part row: human message, then the agent's status as its own
     segment, then dimmed age. Native NSMenuItemBadge pill (trailing edge,
@@ -47,27 +79,33 @@ def session_card(rumps, s, cfg):
         callback=_NOOP)
     _native_row(item, chip, f"{EMOJI[h]} ", name, status_seg,
                 age_str(s.last_activity))
-    lines = []
+    def add(*segments):
+        plain = "".join(t for t, _ in segments)
+        item.add(_attr_item(rumps, segments, plain))
+
     if s.title and s.title != name:
-        lines.append(f"last     “{s.title}”")
+        add(("last message   ", "label"), (f"“{s.title}”", "value"))
     if st != "idle":
-        label = {"blocked": "waiting for human", "network": "network issue",
-                 "thinking": "thinking"}[st]
-        lines.append(f"status   {label}" + (f" — {reason}" if reason else ""))
+        add(("status   ", "label"), (status_seg, "bold"),
+            (f" — {reason}" if reason else "", "dim"))
     info = " · ".join(x for x in (
         s.model, s.branch, f"{len(s.latencies)} turns" if s.latencies else "") if x)
     if info:
-        lines.append(info)
+        add((info, "dim"))
     if s.context_window:
-        lines.append(f"context  {context_bar(s.tokens_used, s.context_window)}")
+        frac = min(s.tokens_used / s.context_window, 1.0)
+        pct_style = "red" if frac >= 0.8 else "orange" if frac >= 0.6 else "green"
+        bar, pct, detail = context_bar(s.tokens_used, s.context_window).split(" ", 2)
+        add(("context  ", "label"), (bar + " ", "mono"), (pct, pct_style),
+            (f" {detail}", "dim"))
     if s.latencies:
         med = statistics.median(s.latencies)
-        lines.append(f"latency  {sparkline(s.latencies)}  last {s.latencies[-1]:.0f}s, med {med:.0f}s")
+        add(("latency  ", "label"), (sparkline(s.latencies) + "  ", "mono"),
+            (f"last {s.latencies[-1]:.0f}s", "bold"), (f" · med {med:.0f}s", "dim"))
     n = strikes(s, cfg)
     cause = "slow turns" if s.use_latency_strikes else "errors/aborts"
-    lines.append(f"strikes  {n}" + (f" ({cause})" if n else ""))
-    for line in lines:
-        item.add(rumps.MenuItem(line, callback=_NOOP))
+    add(("strikes  ", "label"), (str(n), "red" if n else "green"),
+        (f" ({cause})" if n else "", "dim"))
     return item
 
 
