@@ -11,14 +11,48 @@ EMOJI = {"green": "\U0001f7e2", "yellow": "\U0001f7e1", "red": "\U0001f534"}
 _NOOP = lambda _: None  # menu items without a callback render disabled on macOS
 
 
+def _styled_row(item, emoji, badge, chip, title, age):
+    """Render the row as attributed text: the tool/project chip on a subtle
+    background, the message in normal text, the age dimmed — visually
+    separated instead of one flat string. Best effort; plain text stays if
+    AppKit styling fails."""
+    try:
+        from AppKit import (NSBackgroundColorAttributeName, NSColor, NSFont,
+                            NSFontAttributeName, NSForegroundColorAttributeName,
+                            NSMutableAttributedString)
+        out = NSMutableAttributedString.alloc().initWithString_(f"{emoji} {badge}")
+        parts = [
+            (f" {chip} ", {
+                NSFontAttributeName: NSFont.boldSystemFontOfSize_(12),
+                NSBackgroundColorAttributeName:
+                    NSColor.systemGrayColor().colorWithAlphaComponent_(0.22),
+            }),
+            (f"  {title}" if title else "", {
+                NSFontAttributeName: NSFont.menuFontOfSize_(13),
+            }),
+            (f"   {age}", {
+                NSFontAttributeName: NSFont.menuFontOfSize_(11),
+                NSForegroundColorAttributeName: NSColor.secondaryLabelColor(),
+            }),
+        ]
+        for text, attrs in parts:
+            if text:
+                out.appendAttributedString_(
+                    NSMutableAttributedString.alloc().initWithString_attributes_(text, attrs))
+        item._menuitem.setAttributedTitle_(out)
+    except Exception:
+        pass
+
+
 def session_card(rumps, s, cfg):
     h = health(s, cfg)
     st, reason = status(s, cfg)
     badge = {"blocked": "🙋 ", "network": "🌐 ", "thinking": "🤔 "}.get(st, "")
-    title = f" “{s.title}”" if s.title else ""
+    chip = f"{s.tool} · {s.label}"
     item = rumps.MenuItem(
-        f"{EMOJI[h]} {badge}{s.tool} ({s.label}){title} · {age_str(s.last_activity)}",
+        f"{EMOJI[h]} {badge}{chip}  {s.title} · {age_str(s.last_activity)}",
         callback=_NOOP)
+    _styled_row(item, EMOJI[h], badge, chip, s.title, age_str(s.last_activity))
     lines = []
     if st != "idle":
         label = {"blocked": "waiting for human", "network": "network issue",
