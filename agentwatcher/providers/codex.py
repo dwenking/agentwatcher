@@ -75,21 +75,26 @@ def scan(state, cfg):
 
 
 def _add_db_errors(active, pcfg):
-    """Best-effort: count recent ERROR rows per session thread_id."""
+    """Best-effort per-thread counts: ERROR rows (failure strikes) and network
+    retry rows (codex_core::responses_retry WARNs, e.g. 'Reconnecting…')."""
     if not active:
         return
     db = os.path.expanduser(pcfg["error_db"])
     try:
         con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=1)
         rows = con.execute(
-            "SELECT feedback_log_body FROM logs WHERE level='ERROR' AND ts >= ?",
+            "SELECT level, target, feedback_log_body FROM logs WHERE ts >= ?"
+            " AND (level='ERROR' OR target='codex_core::responses_retry')",
             (int(time.time() - pcfg["error_window_s"]),),
         ).fetchall()
         con.close()
     except Exception:
         return
-    body = "\n".join(r[0] or "" for r in rows)
     for s, uuid in active:
-        if uuid:
-            s.net_error_count = body.count(f"thread_id={uuid}")
-            s.external_strikes += s.net_error_count
+        if not uuid:
+            continue
+        mine = [(lv, tg) for lv, tg, body in rows if f"thread_id={uuid}" in (body or "")]
+        errors = sum(1 for lv, _ in mine if lv == "ERROR")
+        retries = sum(1 for _, tg in mine if tg == "codex_core::responses_retry")
+        s.net_error_count = errors + retries
+        s.external_strikes += errors

@@ -107,7 +107,7 @@ def status(s, cfg, now=None):
     if waiting:
         return "blocked", f"waiting on {waiting[0]}"
     if s.net_error_count:
-        return "network", f"{s.net_error_count} API errors recently"
+        return "network", f"{s.net_error_count} API errors/retries recently"
     if s.in_flight or s.pending_tools:
         gap = now - s.last_activity
         if gap > 3600:  # a turn silent this long is dead (killed session), not waiting
