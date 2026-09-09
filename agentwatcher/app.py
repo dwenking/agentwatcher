@@ -11,17 +11,14 @@ EMOJI = {"green": "\U0001f7e2", "yellow": "\U0001f7e1", "red": "\U0001f534"}
 _NOOP = lambda _: None  # menu items without a callback render disabled on macOS
 
 
-def _native_row(item, tool, chip, emoji_prefix, title, age):
-    """Native components: SF Symbol icon for the tool, NSMenuItemBadge pill
-    (trailing edge, macOS 14+) for tool·project, dimmed age in the title.
-    Best effort; the plain text title stays if any of it fails."""
+def _native_row(item, chip, emoji_prefix, title, age):
+    """Native NSMenuItemBadge pill (trailing edge, macOS 14+) carries the
+    status emoji + tool·project; dimmed age ends the title. Best effort; the
+    plain text title stays if any of it fails."""
     try:
         from AppKit import (NSColor, NSFont, NSFontAttributeName,
-                            NSForegroundColorAttributeName, NSImage,
+                            NSForegroundColorAttributeName,
                             NSMenuItemBadge, NSMutableAttributedString)
-        symbol = "terminal" if tool.startswith("Codex") else "sparkles"
-        item._menuitem.setImage_(
-            NSImage.imageWithSystemSymbolName_accessibilityDescription_(symbol, tool))
         item._menuitem.setBadge_(NSMenuItemBadge.alloc().initWithString_(chip))
         out = NSMutableAttributedString.alloc().initWithString_(f"{emoji_prefix}{title}")
         out.appendAttributedString_(
@@ -39,12 +36,11 @@ def session_card(rumps, s, cfg):
     h = health(s, cfg)
     st, reason = status(s, cfg)
     badge = {"blocked": "🙋 ", "network": "🌐 ", "thinking": "🤔 "}.get(st, "")
-    chip = f"{s.tool} · {s.label}"
+    chip = f"{badge}{s.tool} · {s.label}"
     item = rumps.MenuItem(
-        f"{EMOJI[h]} {badge}{s.title}  [{chip}] · {age_str(s.last_activity)}",
+        f"{EMOJI[h]} {s.title}  [{chip}] · {age_str(s.last_activity)}",
         callback=_NOOP)
-    _native_row(item, s.tool, chip, f"{EMOJI[h]} {badge}", s.title,
-                age_str(s.last_activity))
+    _native_row(item, chip, f"{EMOJI[h]} ", s.title, age_str(s.last_activity))
     lines = []
     if st != "idle":
         label = {"blocked": "waiting for human", "network": "network issue",
