@@ -11,22 +11,24 @@ EMOJI = {"green": "\U0001f7e2", "yellow": "\U0001f7e1", "red": "\U0001f534"}
 _NOOP = lambda _: None  # menu items without a callback render disabled on macOS
 
 
-def _native_row(item, chip, emoji_prefix, title, age):
-    """Native NSMenuItemBadge pill (trailing edge, macOS 14+) carries the
-    status emoji + tool·project; dimmed age ends the title. Best effort; the
-    plain text title stays if any of it fails."""
+def _native_row(item, chip, emoji_prefix, title, status_seg, age):
+    """Two-part row: human message, then the agent's status as its own
+    segment, then dimmed age. Native NSMenuItemBadge pill (trailing edge,
+    macOS 14+) carries tool·project. Best effort; plain text stays on
+    failure."""
     try:
         from AppKit import (NSColor, NSFont, NSFontAttributeName,
                             NSForegroundColorAttributeName,
                             NSMenuItemBadge, NSMutableAttributedString)
         item._menuitem.setBadge_(NSMenuItemBadge.alloc().initWithString_(chip))
         out = NSMutableAttributedString.alloc().initWithString_(f"{emoji_prefix}{title}")
-        out.appendAttributedString_(
-            NSMutableAttributedString.alloc().initWithString_attributes_(
-                f"   {age}", {
-                    NSFontAttributeName: NSFont.menuFontOfSize_(11),
-                    NSForegroundColorAttributeName: NSColor.secondaryLabelColor(),
-                }))
+        for text, size in ((f"   {status_seg}", 12), (f"  ·  {age}", 11)):
+            out.appendAttributedString_(
+                NSMutableAttributedString.alloc().initWithString_attributes_(
+                    text, {
+                        NSFontAttributeName: NSFont.menuFontOfSize_(size),
+                        NSForegroundColorAttributeName: NSColor.secondaryLabelColor(),
+                    }))
         item._menuitem.setAttributedTitle_(out)
     except Exception:
         pass
@@ -35,12 +37,14 @@ def _native_row(item, chip, emoji_prefix, title, age):
 def session_card(rumps, s, cfg):
     h = health(s, cfg)
     st, reason = status(s, cfg)
-    badge = {"blocked": "🙋 ", "network": "🌐 ", "thinking": "🤔 "}.get(st, "")
-    chip = f"{badge}{s.tool} · {s.label}"
+    status_seg = {"blocked": "🙋 waiting for human", "network": "🌐 network issue",
+                  "thinking": "🤔 thinking"}.get(st, "✅ finished")
+    chip = f"{s.tool} · {s.label}"
     item = rumps.MenuItem(
-        f"{EMOJI[h]} {s.title}  [{chip}] · {age_str(s.last_activity)}",
+        f"{EMOJI[h]} {s.title}  {status_seg}  [{chip}] · {age_str(s.last_activity)}",
         callback=_NOOP)
-    _native_row(item, chip, f"{EMOJI[h]} ", s.title, age_str(s.last_activity))
+    _native_row(item, chip, f"{EMOJI[h]} ", s.title, status_seg,
+                age_str(s.last_activity))
     lines = []
     if st != "idle":
         label = {"blocked": "waiting for human", "network": "network issue",
