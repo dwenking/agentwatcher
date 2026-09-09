@@ -22,7 +22,9 @@ class Session:
     tool: str
     label: str
     use_latency_strikes: bool = True
-    title: str = ""
+    title: str = ""        # latest human message
+    name: str = ""         # tool-generated session title (ai-title / thread_name)
+    first_prompt: str = ""
     hidden: bool = False  # subagent/sidechain threads: tracked but not displayed
     latencies: list = field(default_factory=list)
     external_strikes: int = 0
@@ -134,6 +136,12 @@ def context_bar(used, window, width=10):
     frac = min(used / window, 1.0)
     filled = int(frac * width + 0.5)
     return f"{'▓' * filled}{'░' * (width - filled)} {frac * 100:.0f}% ({used / 1000:.0f}k/{window / 1000:.0f}k)"
+
+
+def display_name(s):
+    """What identifies the conversation: the tool's own session title, else
+    the task-stating first prompt, else the latest message."""
+    return s.name or s.first_prompt or s.title
 
 
 def age_str(ts):

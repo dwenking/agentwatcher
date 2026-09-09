@@ -23,6 +23,9 @@ def scan(state, cfg):
             t = r.get("type")
             # "last-prompt" reflects the newest typed prompt even while it is
             # still queued behind a running turn (no user record exists yet).
+            if t == "ai-title":
+                s.name = r.get("aiTitle") or s.name
+                continue
             if t == "last-prompt":
                 s.title = prompt_snippet(r.get("lastPrompt")) or s.title
                 continue
@@ -51,6 +54,7 @@ def scan(state, cfg):
                     s.in_flight = True
                     s.pending_tools.clear()
                 s.title = prompt_snippet(content) or s.title
+                s.first_prompt = s.first_prompt or prompt_snippet(content)
             else:
                 msg = r.get("message", {})
                 if r.get("isApiErrorMessage"):

@@ -4,7 +4,8 @@ import subprocess
 import time
 
 from agentwatcher import core
-from agentwatcher.core import age_str, context_bar, health, sparkline, status, strikes
+from agentwatcher.core import (age_str, context_bar, display_name, health,
+                               sparkline, status, strikes)
 from agentwatcher.providers import load_providers
 
 EMOJI = {"green": "\U0001f7e2", "yellow": "\U0001f7e1", "red": "\U0001f534"}
@@ -40,12 +41,15 @@ def session_card(rumps, s, cfg):
     status_seg = {"blocked": "🙋 waiting for human", "network": "🌐 network issue",
                   "thinking": "🤔 thinking"}.get(st, "✅ finished")
     chip = f"{s.tool} · {s.label}"
+    name = display_name(s)
     item = rumps.MenuItem(
-        f"{EMOJI[h]} {s.title}  {status_seg}  [{chip}] · {age_str(s.last_activity)}",
+        f"{EMOJI[h]} {name}  {status_seg}  [{chip}] · {age_str(s.last_activity)}",
         callback=_NOOP)
-    _native_row(item, chip, f"{EMOJI[h]} ", s.title, status_seg,
+    _native_row(item, chip, f"{EMOJI[h]} ", name, status_seg,
                 age_str(s.last_activity))
     lines = []
+    if s.title and s.title != name:
+        lines.append(f"last     “{s.title}”")
     if st != "idle":
         label = {"blocked": "waiting for human", "network": "network issue",
                  "thinking": "thinking"}[st]

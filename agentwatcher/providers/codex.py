@@ -45,6 +45,7 @@ def scan(state, cfg):
                     s.label = os.path.basename(cwd) or cwd
             elif t == "user_message":
                 s.title = prompt_snippet(p.get("message")) or s.title
+                s.first_prompt = s.first_prompt or prompt_snippet(p.get("message"))
             elif t == "token_count":
                 info = p.get("info") or {}
                 usage = info.get("last_token_usage") or {}
@@ -67,11 +68,36 @@ def scan(state, cfg):
                 starts.pop(p.get("turn_id"), None) if p.get("turn_id") else starts.clear()
         s.in_flight = bool(starts)
         m = re.search(r"([0-9a-f-]{36})\.jsonl$", path)
+        if m:
+            s.name = _thread_names(pcfg).get(m.group(1), s.name)
         cutoff = time.time() - err_window_s
         s.external_strikes = sum(1 for a in s.abort_times if a >= cutoff)
         active.append((s, m.group(1) if m else None))
     _add_db_errors(active, pcfg)
     return list(sessions.values())
+
+
+_names_cache = {"mtime": 0.0, "names": {}}
+
+
+def _thread_names(pcfg):
+    """id -> thread_name from session_index.jsonl (Codex's own session titles)."""
+    path = os.path.expanduser(pcfg.get("session_index", "~/.codex/session_index.jsonl"))
+    try:
+        mtime = os.path.getmtime(path)
+        if mtime != _names_cache["mtime"]:
+            names = {}
+            for line in open(path):
+                try:
+                    e = json.loads(line)
+                    if e.get("thread_name"):
+                        names[e.get("id")] = e["thread_name"]
+                except ValueError:
+                    continue
+            _names_cache.update(mtime=mtime, names=names)
+    except OSError:
+        pass
+    return _names_cache["names"]
 
 
 def _add_db_errors(active, pcfg):
