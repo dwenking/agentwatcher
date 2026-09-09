@@ -34,7 +34,7 @@ def scan(state, cfg):
             p = r.get("payload", {})
             t = p.get("type")
             ts = iso_ts(r["timestamp"]) if r.get("timestamp") else None
-            if t == "turn_context" or r.get("type") == "session_meta":
+            if t == "turn_context" or r.get("type") in ("turn_context", "session_meta"):
                 if p.get("parent_thread_id"):
                     s.hidden = True
                 if "codex_vscode" in line:
