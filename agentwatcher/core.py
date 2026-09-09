@@ -163,8 +163,12 @@ def read_new_lines(s, path):
     with open(path, "rb") as f:
         f.seek(s.offset)
         data = f.read()
-    s.offset = size
-    return data.decode("utf-8", "replace").splitlines()
+    # A writer may flush mid-line between polls; consuming the partial line
+    # now would corrupt it (and its UTF-8 tail) once the rest arrives. Only
+    # advance past complete lines and keep the remainder for the next scan.
+    keep = len(data) if data.endswith(b"\n") else data.rfind(b"\n") + 1
+    s.offset += keep
+    return data[:keep].decode("utf-8", "replace").splitlines()
 
 
 def prompt_snippet(content, limit=40):
