@@ -1,0 +1,15 @@
+pyproject.toml
+agentwatcher/__init__.py
+agentwatcher/app.py
+agentwatcher/core.py
+agentwatcher/default_config.json
+agentwatcher.egg-info/PKG-INFO
+agentwatcher.egg-info/SOURCES.txt
+agentwatcher.egg-info/dependency_links.txt
+agentwatcher.egg-info/entry_points.txt
+agentwatcher.egg-info/requires.txt
+agentwatcher.egg-info/top_level.txt
+agentwatcher/providers/__init__.py
+agentwatcher/providers/claude_code.py
+agentwatcher/providers/codex.py
+tests/test_core.py

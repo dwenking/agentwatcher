@@ -1,0 +1,24 @@
+[project]
+name = "agentwatcher"
+version = "0.1.0"
+description = "macOS menu bar health monitor for AI coding sessions (Claude Code, Codex, and drop-in providers)"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = ["rumps>=0.4"]
+
+[project.urls]
+Homepage = "https://github.com/dwenking/agentwatcher"
+
+[project.scripts]
+agentwatcher = "agentwatcher.app:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["agentwatcher*"]
+
+[tool.setuptools.package-data]
+agentwatcher = ["default_config.json"]

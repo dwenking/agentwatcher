@@ -1,0 +1,22 @@
+{
+  "poll_seconds": 5,
+  "baseline_turns": 5,
+  "strike_ratio": 3.0,
+  "strike_absolute_s": 90,
+  "strike_window": 5,
+  "alert_strikes": 2,
+  "idle_minutes": 30,
+  "claude_context_window": 200000,
+  "providers": {
+    "claude_code": {
+      "enabled": true,
+      "glob": "~/.claude/projects/*/*.jsonl"
+    },
+    "codex": {
+      "enabled": true,
+      "glob": "~/.codex/sessions/*/*/*/rollout-*.jsonl",
+      "error_db": "~/.codex/logs_2.sqlite",
+      "error_window_s": 300
+    }
+  }
+}

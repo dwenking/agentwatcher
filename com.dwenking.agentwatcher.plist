@@ -3,17 +3,16 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.wenkingd.session-watcher</string>
+    <string>com.dwenking.agentwatcher</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/wenkingd/projects/session-watcher/.venv/bin/python</string>
-        <string>/Users/wenkingd/projects/session-watcher/watcher.py</string>
+        <string>/Users/wenkingd/projects/agentwatcher/.venv/bin/agentwatcher</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardErrorPath</key>
-    <string>/tmp/session-watcher.err</string>
+    <string>/tmp/agentwatcher.err</string>
 </dict>
 </plist>

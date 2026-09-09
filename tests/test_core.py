@@ -1,5 +1,5 @@
-"""Tests for the pure health logic: baseline, strikes, health color, alert-once."""
-import watcher
+"""Tests for the pure health/rendering logic: baseline, strikes, health, snippets."""
+from agentwatcher import core
 
 
 CFG = {
@@ -12,7 +12,7 @@ CFG = {
 
 
 def _session(latencies, extra_strikes=0):
-    s = watcher.Session(key="k", tool="claude-cli", label="proj")
+    s = core.Session(key="k", tool="Claude Code", label="proj")
     s.latencies = list(latencies)
     s.external_strikes = extra_strikes
     return s
@@ -21,45 +21,44 @@ def _session(latencies, extra_strikes=0):
 def test_no_strikes_while_baseline_forming():
     # Fewer samples than baseline_turns: nothing counts as a strike yet.
     s = _session([10, 200, 300])
-    assert watcher.strikes(s, CFG) == 0
+    assert core.strikes(s, CFG) == 0
 
 
 def test_latency_strike_on_ratio_and_absolute():
     # Baseline median of first 5 = 10s. 35s > 3x baseline -> strike; 95s > 90s absolute -> strike.
     s = _session([10, 10, 10, 10, 10, 35, 12, 95])
-    assert watcher.strikes(s, CFG) == 2
+    assert core.strikes(s, CFG) == 2
 
 
 def test_strikes_only_counted_in_recent_window():
     # Two old strikes scrolled out of the last-5-turn window; one recent.
     s = _session([10, 10, 10, 10, 10, 99, 99, 10, 10, 10, 10, 99])
-    assert watcher.strikes(s, CFG) == 1
+    assert core.strikes(s, CFG) == 1
 
 
 def test_health_color():
-    assert watcher.health(_session([10] * 5), CFG) == "green"
-    assert watcher.health(_session([10] * 5 + [40]), CFG) == "yellow"
-    assert watcher.health(_session([10] * 5 + [40, 40]), CFG) == "red"
+    assert core.health(_session([10] * 5), CFG) == "green"
+    assert core.health(_session([10] * 5 + [40]), CFG) == "yellow"
+    assert core.health(_session([10] * 5 + [40, 40]), CFG) == "red"
 
 
 def test_external_strikes_count():
     # Codex: errors/aborts arrive as external strikes, no latency needed.
     s = _session([], extra_strikes=2)
-    assert watcher.health(s, CFG) == "red"
+    assert core.health(s, CFG) == "red"
 
 
 def test_prompt_snippet():
-    assert watcher._prompt_snippet("fix the bug\nmore detail") == "fix the bug"
-    assert watcher._prompt_snippet([{"type": "text", "text": "hello"}]) == "hello"
-    assert watcher._prompt_snippet("<bash-input>ls</bash-input>") == ""
-    assert watcher._prompt_snippet("[Request interrupted by user]") == ""
-    assert watcher._prompt_snippet("[Image #1] why is this slow") == "why is this slow"
-    assert watcher._prompt_snippet("x" * 50) == "x" * 40 + "…"
+    assert core.prompt_snippet("fix the bug\nmore detail") == "fix the bug"
+    assert core.prompt_snippet([{"type": "text", "text": "hello"}]) == "hello"
+    assert core.prompt_snippet("<bash-input>ls</bash-input>") == ""
+    assert core.prompt_snippet("[Request interrupted by user]") == ""
+    assert core.prompt_snippet("[Image #1] why is this slow") == "why is this slow"
+    assert core.prompt_snippet("x" * 50) == "x" * 40 + "…"
 
 
 def test_claude_turn_latencies_from_events():
     # user@0 -> assistant@46 (46s), tool-result user@50 -> assistant@62 (12s).
-    # Sidechain and meta records ignored.
     events = [
         {"type": "user", "ts": 0.0},
         {"type": "assistant", "ts": 46.0},
@@ -67,7 +66,14 @@ def test_claude_turn_latencies_from_events():
         {"type": "assistant", "ts": 62.0},
         {"type": "user", "ts": 70.0},  # unanswered trailing prompt
     ]
-    assert watcher.pair_latencies(events) == [46.0, 12.0]
+    assert core.pair_latencies(events) == [46.0, 12.0]
+
+
+def test_rendering_helpers():
+    assert core.sparkline([]) == ""
+    assert core.sparkline([1, 4, 8]) == "▂▅█"
+    assert core.context_bar(100_000, 200_000) == "▓▓▓▓▓░░░░░ 50% (100k/200k)"
+    assert core.context_bar(0, 0) == ""
 
 
 if __name__ == "__main__":

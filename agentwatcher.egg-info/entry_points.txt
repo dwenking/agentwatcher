@@ -1,0 +1,2 @@
+[console_scripts]
+agentwatcher = agentwatcher.app:main

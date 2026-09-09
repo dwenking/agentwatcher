@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: agentwatcher
+Version: 0.1.0
+Summary: macOS menu bar health monitor for AI coding sessions (Claude Code, Codex, and drop-in providers)
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/dwenking/agentwatcher
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: rumps>=0.4
