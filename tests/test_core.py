@@ -69,6 +69,22 @@ def test_claude_turn_latencies_from_events():
     assert core.pair_latencies(events) == [46.0, 12.0]
 
 
+def test_status_detection():
+    cfg = dict(CFG, blocked_after_s=120)
+    now = 1000.0
+    s = _session([])
+    s.last_activity = now - 10
+    assert core.status(s, cfg, now) == ("idle", "")
+    s.in_flight = True
+    assert core.status(s, cfg, now)[0] == "running"
+    s.last_activity = now - 300  # in-flight but silent too long -> blocked
+    assert core.status(s, cfg, now)[0] == "blocked"
+    s2 = _session([])
+    s2.last_activity = now - 5  # interactive tool pending -> blocked immediately
+    s2.pending_tools = {"t1": "AskUserQuestion"}
+    assert core.status(s2, cfg, now) == ("blocked", "waiting on AskUserQuestion")
+
+
 def test_rendering_helpers():
     assert core.sparkline([]) == ""
     assert core.sparkline([1, 4, 8]) == "▂▅█"

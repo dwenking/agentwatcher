@@ -31,6 +31,8 @@ class Session:
     context_window: int = 0
     model: str = ""
     branch: str = ""
+    in_flight: bool = False
+    pending_tools: dict = field(default_factory=dict)  # tool_use_id -> tool name
     offset: int = 0
     events: list = field(default_factory=list)
     abort_times: list = field(default_factory=list)
@@ -87,6 +89,28 @@ def health(s, cfg):
     if n >= cfg["alert_strikes"]:
         return "red"
     return "yellow" if n else "green"
+
+
+# tools that always mean "waiting for a human decision"
+INTERACTIVE_TOOLS = {"AskUserQuestion", "ExitPlanMode", "EnterPlanMode"}
+
+
+def status(s, cfg, now=None):
+    """('running'|'blocked'|'idle', reason). Blocked = the agent is waiting on
+    the human: an interactive tool is pending, or an in-flight turn produced no
+    log records for blocked_after_s (permission prompt or hang)."""
+    now = time.time() if now is None else now
+    waiting = [n for n in s.pending_tools.values() if n in INTERACTIVE_TOOLS]
+    if waiting:
+        return "blocked", f"waiting on {waiting[0]}"
+    if s.in_flight or s.pending_tools:
+        gap = now - s.last_activity
+        if gap > 3600:  # a turn silent this long is dead (killed session), not waiting
+            return "idle", ""
+        if gap > cfg["blocked_after_s"]:
+            return "blocked", f"stalled {age_str(s.last_activity)} — approval needed?"
+        return "running", ""
+    return "idle", ""
 
 
 # --- rendering helpers --------------------------------------------------------

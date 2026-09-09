@@ -64,6 +64,8 @@ def scan(state, cfg):
                 s.last_activity = max(s.last_activity, ts)
             elif t == "turn_aborted" and ts:
                 s.abort_times.append(ts)
+                starts.pop(p.get("turn_id"), None) if p.get("turn_id") else starts.clear()
+        s.in_flight = bool(starts)
         m = re.search(r"([0-9a-f-]{36})\.jsonl$", path)
         cutoff = time.time() - err_window_s
         s.external_strikes = sum(1 for a in s.abort_times if a >= cutoff)

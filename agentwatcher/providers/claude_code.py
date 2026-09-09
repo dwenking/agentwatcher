@@ -38,11 +38,28 @@ def scan(state, cfg):
                 s.tool = "Claude Code" + ("" if ep == "cli" else " (IDE)")
                 s.label = os.path.basename(r.get("cwd", "") or "?")
             if t == "user":
-                s.title = prompt_snippet(r.get("message", {}).get("content")) or s.title
+                content = r.get("message", {}).get("content")
+                results = [b for b in content if isinstance(b, dict)
+                           and b.get("type") == "tool_result"] if isinstance(content, list) else []
+                if results:
+                    for b in results:
+                        s.pending_tools.pop(b.get("tool_use_id"), None)
+                else:
+                    # a fresh human prompt starts a turn and supersedes any
+                    # tools left dangling by an interrupted one
+                    s.in_flight = True
+                    s.pending_tools.clear()
+                s.title = prompt_snippet(content) or s.title
             else:
-                s.model = r.get("message", {}).get("model") or s.model
+                msg = r.get("message", {})
+                s.model = msg.get("model") or s.model
                 s.branch = r.get("gitBranch") or s.branch
-                usage = r.get("message", {}).get("usage") or {}
+                for b in msg.get("content") or []:
+                    if isinstance(b, dict) and b.get("type") == "tool_use":
+                        s.pending_tools[b.get("id")] = b.get("name", "?")
+                if msg.get("stop_reason") in ("end_turn", "stop_sequence", "max_tokens", "refusal"):
+                    s.in_flight = False
+                usage = msg.get("usage") or {}
                 used = sum(usage.get(k, 0) or 0 for k in (
                     "input_tokens", "cache_read_input_tokens",
                     "cache_creation_input_tokens", "output_tokens"))
