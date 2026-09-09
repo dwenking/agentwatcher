@@ -60,7 +60,7 @@ First run creates `~/.config/agentwatcher/config.json`:
   "strike_absolute_s": 90,    // turn ≥ this -> strike regardless of baseline
   "strike_window": 5,         // strikes counted over the last N turns
   "alert_strikes": 2,         // red at this many strikes
-  "idle_minutes": 30,         // sessions idle longer disappear
+  "history_hours": 48,        // how far back to scan for sessions
   "max_sessions": 10,         // show at most this many (most recent first)
   "claude_context_window": 200000,
   "providers": {

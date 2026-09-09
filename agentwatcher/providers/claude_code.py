@@ -10,7 +10,7 @@ from agentwatcher.core import (
 def scan(state, cfg):
     pcfg = cfg["providers"]["claude_code"]
     sessions = state.setdefault("sessions", {})
-    for path in recent_files(pcfg["glob"], cfg["idle_minutes"] * 60):
+    for path in recent_files(pcfg["glob"], cfg["history_hours"] * 3600):
         s = sessions.get(path)
         if s is None:
             s = sessions[path] = Session(key=path, tool="Claude Code", label="?")

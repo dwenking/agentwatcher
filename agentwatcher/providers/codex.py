@@ -19,7 +19,7 @@ def scan(state, cfg):
     sessions = state.setdefault("sessions", {})
     err_window_s = pcfg["error_window_s"]
     active = []
-    for path in recent_files(pcfg["glob"], cfg["idle_minutes"] * 60):
+    for path in recent_files(pcfg["glob"], cfg["history_hours"] * 3600):
         s = sessions.get(path)
         if s is None:
             s = sessions[path] = Session(

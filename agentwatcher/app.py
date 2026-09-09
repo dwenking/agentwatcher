@@ -39,7 +39,7 @@ def main():
     cfg = core.load_config()
     providers = load_providers(cfg)
     states = {name: {} for name, _ in providers}
-    idle_s = cfg["idle_minutes"] * 60
+    history_s = cfg["history_hours"] * 3600
 
     app = rumps.App("agentwatcher", title=EMOJI["green"], quit_button="Quit")
 
@@ -50,7 +50,7 @@ def main():
                 found.extend(scan(states[name], cfg))
             except Exception as e:
                 errors.append(f"{name}: {e}")
-        cutoff = time.time() - idle_s
+        cutoff = time.time() - history_s
         live = sorted(
             (s for s in found if s.last_activity >= cutoff and not s.hidden),
             key=lambda s: -s.last_activity,
