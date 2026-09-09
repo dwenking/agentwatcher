@@ -29,6 +29,8 @@ class Session:
     last_activity: float = 0.0
     tokens_used: int = 0
     context_window: int = 0
+    model: str = ""
+    branch: str = ""
     offset: int = 0
     events: list = field(default_factory=list)
     abort_times: list = field(default_factory=list)

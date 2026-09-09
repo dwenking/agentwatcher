@@ -40,6 +40,8 @@ def scan(state, cfg):
             if t == "user":
                 s.title = prompt_snippet(r.get("message", {}).get("content")) or s.title
             else:
+                s.model = r.get("message", {}).get("model") or s.model
+                s.branch = r.get("gitBranch") or s.branch
                 usage = r.get("message", {}).get("usage") or {}
                 used = sum(usage.get(k, 0) or 0 for k in (
                     "input_tokens", "cache_read_input_tokens",

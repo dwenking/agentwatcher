@@ -39,6 +39,7 @@ def scan(state, cfg):
                     s.hidden = True
                 if "codex_vscode" in line:
                     s.tool = "Codex (IDE)"
+                s.model = p.get("model") or s.model
                 cwd = p.get("cwd")
                 if cwd:
                     s.label = os.path.basename(cwd) or cwd

@@ -61,6 +61,7 @@ First run creates `~/.config/agentwatcher/config.json`:
   "strike_window": 5,         // strikes counted over the last N turns
   "alert_strikes": 2,         // red at this many strikes
   "idle_minutes": 30,         // sessions idle longer disappear
+  "max_sessions": 10,         // show at most this many (most recent first)
   "claude_context_window": 200000,
   "providers": {
     "claude_code": { "enabled": true, "glob": "~/.claude/projects/*/*.jsonl" },

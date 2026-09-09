@@ -15,6 +15,10 @@ def session_card(rumps, s, cfg):
     title = f" “{s.title}”" if s.title else ""
     item = rumps.MenuItem(f"{EMOJI[h]} {s.tool} ({s.label}){title}", callback=_NOOP)
     lines = []
+    info = " · ".join(x for x in (
+        s.model, s.branch, f"{len(s.latencies)} turns" if s.latencies else "") if x)
+    if info:
+        lines.append(info)
     if s.context_window:
         lines.append(f"context  {context_bar(s.tokens_used, s.context_window)}")
     if s.latencies:
@@ -50,7 +54,7 @@ def main():
         live = sorted(
             (s for s in found if s.last_activity >= cutoff and not s.hidden),
             key=lambda s: -s.last_activity,
-        )
+        )[:cfg["max_sessions"]]
         worst = "green"
         items = [rumps.MenuItem(f"⚠️ {e}", callback=_NOOP) for e in errors]
         for s in live:

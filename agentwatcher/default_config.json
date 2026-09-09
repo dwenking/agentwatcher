@@ -6,6 +6,7 @@
   "strike_window": 5,
   "alert_strikes": 2,
   "idle_minutes": 30,
+  "max_sessions": 10,
   "claude_context_window": 200000,
   "providers": {
     "claude_code": {
