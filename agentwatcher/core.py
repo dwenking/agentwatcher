@@ -33,6 +33,8 @@ class Session:
     branch: str = ""
     in_flight: bool = False
     pending_tools: dict = field(default_factory=dict)  # tool_use_id -> tool name
+    net_error_count: int = 0  # recent API/network errors, set fresh each scan
+    error_times: list = field(default_factory=list)
     offset: int = 0
     events: list = field(default_factory=list)
     abort_times: list = field(default_factory=list)
@@ -96,20 +98,23 @@ INTERACTIVE_TOOLS = {"AskUserQuestion", "ExitPlanMode", "EnterPlanMode"}
 
 
 def status(s, cfg, now=None):
-    """('running'|'blocked'|'idle', reason). Blocked = the agent is waiting on
-    the human: an interactive tool is pending, or an in-flight turn produced no
-    log records for blocked_after_s (permission prompt or hang)."""
+    """('blocked'|'network'|'thinking'|'idle', reason).
+    blocked = waiting on the human (interactive tool pending, or an in-flight
+    turn silent past blocked_after_s — permission prompt or hang);
+    network = recent API/stream errors; thinking = turn in flight and moving."""
     now = time.time() if now is None else now
     waiting = [n for n in s.pending_tools.values() if n in INTERACTIVE_TOOLS]
     if waiting:
         return "blocked", f"waiting on {waiting[0]}"
+    if s.net_error_count:
+        return "network", f"{s.net_error_count} API errors recently"
     if s.in_flight or s.pending_tools:
         gap = now - s.last_activity
         if gap > 3600:  # a turn silent this long is dead (killed session), not waiting
             return "idle", ""
         if gap > cfg["blocked_after_s"]:
             return "blocked", f"stalled {age_str(s.last_activity)} — approval needed?"
-        return "running", ""
+        return "thinking", ""
     return "idle", ""
 
 

@@ -62,7 +62,8 @@ First run creates `~/.config/agentwatcher/config.json`:
   "alert_strikes": 2,         // red at this many strikes
   "history_hours": 48,        // how far back to scan for sessions
   "max_sessions": 10,         // show at most this many (blocked first, then most recent)
-  "blocked_after_s": 120,     // in-flight turn silent this long -> blocked (✋)
+  "blocked_after_s": 120,     // in-flight turn silent this long -> blocked (🙋)
+  "network_error_window_s": 300, // API errors within this window -> network state (🌐)
   "claude_context_window": 200000,
   "providers": {
     "claude_code": { "enabled": true, "glob": "~/.claude/projects/*/*.jsonl" },

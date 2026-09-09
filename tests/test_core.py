@@ -76,9 +76,14 @@ def test_status_detection():
     s.last_activity = now - 10
     assert core.status(s, cfg, now) == ("idle", "")
     s.in_flight = True
-    assert core.status(s, cfg, now)[0] == "running"
+    assert core.status(s, cfg, now)[0] == "thinking"
+    s.net_error_count = 2  # API errors trump thinking
+    assert core.status(s, cfg, now)[0] == "network"
+    s.net_error_count = 0
     s.last_activity = now - 300  # in-flight but silent too long -> blocked
     assert core.status(s, cfg, now)[0] == "blocked"
+    s.last_activity = now - 7200  # silent for hours -> dead session, not blocked
+    assert core.status(s, cfg, now)[0] == "idle"
     s2 = _session([])
     s2.last_activity = now - 5  # interactive tool pending -> blocked immediately
     s2.pending_tools = {"t1": "AskUserQuestion"}

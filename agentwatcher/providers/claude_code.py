@@ -1,6 +1,7 @@
 """Provider: Claude Code transcripts (~/.claude/projects), CLI and IDE surfaces."""
 import json
 import os
+import time
 
 from agentwatcher.core import (
     Session, iso_ts, pair_latencies, prompt_snippet, read_new_lines, recent_files,
@@ -52,7 +53,10 @@ def scan(state, cfg):
                 s.title = prompt_snippet(content) or s.title
             else:
                 msg = r.get("message", {})
-                s.model = msg.get("model") or s.model
+                if r.get("isApiErrorMessage"):
+                    s.error_times.append(iso_ts(ts))
+                if msg.get("model") and msg["model"] != "<synthetic>":
+                    s.model = msg["model"]
                 s.branch = r.get("gitBranch") or s.branch
                 for b in msg.get("content") or []:
                     if isinstance(b, dict) and b.get("type") == "tool_use":
@@ -69,4 +73,8 @@ def scan(state, cfg):
             s.events.append({"type": t, "ts": iso_ts(ts)})
             s.last_activity = max(s.last_activity, iso_ts(ts))
         s.latencies = pair_latencies(s.events)
+        # API errors also count as failure strikes
+        err_cutoff = time.time() - cfg["network_error_window_s"]
+        s.net_error_count = sum(1 for e in s.error_times if e >= err_cutoff)
+        s.external_strikes = s.net_error_count
     return list(sessions.values())

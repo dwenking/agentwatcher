@@ -8,6 +8,7 @@
   "history_hours": 48,
   "max_sessions": 10,
   "blocked_after_s": 120,
+  "network_error_window_s": 300,
   "claude_context_window": 200000,
   "providers": {
     "claude_code": {

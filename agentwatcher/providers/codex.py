@@ -91,4 +91,5 @@ def _add_db_errors(active, pcfg):
     body = "\n".join(r[0] or "" for r in rows)
     for s, uuid in active:
         if uuid:
-            s.external_strikes += body.count(f"thread_id={uuid}")
+            s.net_error_count = body.count(f"thread_id={uuid}")
+            s.external_strikes += s.net_error_count

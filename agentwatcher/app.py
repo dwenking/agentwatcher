@@ -13,12 +13,14 @@ _NOOP = lambda _: None  # menu items without a callback render disabled on macOS
 def session_card(rumps, s, cfg):
     h = health(s, cfg)
     st, reason = status(s, cfg)
-    badge = {"blocked": "✋ ", "running": "▶ "}.get(st, "")
+    badge = {"blocked": "🙋 ", "network": "🌐 ", "thinking": "🤔 "}.get(st, "")
     title = f" “{s.title}”" if s.title else ""
     item = rumps.MenuItem(f"{EMOJI[h]} {badge}{s.tool} ({s.label}){title}", callback=_NOOP)
     lines = []
     if st != "idle":
-        lines.append(f"status   {st}" + (f" — {reason}" if reason else ""))
+        label = {"blocked": "waiting for human", "network": "network issue",
+                 "thinking": "thinking"}[st]
+        lines.append(f"status   {label}" + (f" — {reason}" if reason else ""))
     info = " · ".join(x for x in (
         s.model, s.branch, f"{len(s.latencies)} turns" if s.latencies else "") if x)
     if info:
@@ -57,7 +59,9 @@ def main():
         cutoff = time.time() - history_s
         live = sorted(
             (s for s in found if s.last_activity >= cutoff and not s.hidden),
-            key=lambda s: (status(s, cfg)[0] != "blocked", -s.last_activity),
+            key=lambda s: (["blocked", "network"].index(status(s, cfg)[0])
+                           if status(s, cfg)[0] in ("blocked", "network") else 2,
+                           -s.last_activity),
         )[:cfg["max_sessions"]]
         worst = "green"
         blocked = 0
@@ -67,7 +71,7 @@ def main():
             blocked += status(s, cfg)[0] == "blocked"
             items.append(session_card(rumps, s, cfg))
         title = "⚠️" if errors else EMOJI[worst]
-        app.title = title + (f"✋{blocked}" if blocked else "")
+        app.title = title + (f"🙋{blocked}" if blocked else "")
         app.menu.clear()
         app.menu = (items or [rumps.MenuItem("no active sessions", callback=_NOOP)]) + [None]
 
