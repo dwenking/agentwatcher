@@ -1,6 +1,6 @@
 [project]
 name = "agentwatcher"
-version = "0.2.0"
+version = "0.3.0"
 description = "macOS menu bar health monitor for AI coding sessions (Claude Code, Codex, and drop-in providers)"
 readme = "README.md"
 license = "MIT"

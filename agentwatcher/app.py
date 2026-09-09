@@ -1,5 +1,6 @@
 """Menu bar app: worst-session traffic light, per-session detail cards."""
 import statistics
+import subprocess
 import time
 
 from agentwatcher import core
@@ -15,7 +16,9 @@ def session_card(rumps, s, cfg):
     st, reason = status(s, cfg)
     badge = {"blocked": "🙋 ", "network": "🌐 ", "thinking": "🤔 "}.get(st, "")
     title = f" “{s.title}”" if s.title else ""
-    item = rumps.MenuItem(f"{EMOJI[h]} {badge}{s.tool} ({s.label}){title}", callback=_NOOP)
+    item = rumps.MenuItem(
+        f"{EMOJI[h]} {badge}{s.tool} ({s.label}){title} · {age_str(s.last_activity)}",
+        callback=_NOOP)
     lines = []
     if st != "idle":
         label = {"blocked": "waiting for human", "network": "network issue",
@@ -33,9 +36,22 @@ def session_card(rumps, s, cfg):
     n = strikes(s, cfg)
     cause = "slow turns" if s.use_latency_strikes else "errors/aborts"
     lines.append(f"strikes  {n}" + (f" ({cause})" if n else ""))
-    lines.append(f"active   {age_str(s.last_activity)}")
     for line in lines:
         item.add(rumps.MenuItem(line, callback=_NOOP))
+    return item
+
+
+def config_item(rumps, cfg):
+    item = rumps.MenuItem("⚙️ Config", callback=_NOOP)
+    for k, v in cfg.items():
+        if k == "providers":
+            enabled = [n for n, p in v.items() if p.get("enabled", True)]
+            item.add(rumps.MenuItem(f"providers: {', '.join(enabled)}", callback=_NOOP))
+        else:
+            item.add(rumps.MenuItem(f"{k}: {v}", callback=_NOOP))
+    item.add(rumps.MenuItem(
+        "Edit config file… (restart to apply)",
+        callback=lambda _: subprocess.call(["open", core.CONFIG_PATH])))
     return item
 
 
@@ -59,9 +75,7 @@ def main():
         cutoff = time.time() - history_s
         live = sorted(
             (s for s in found if s.last_activity >= cutoff and not s.hidden),
-            key=lambda s: (["blocked", "network"].index(status(s, cfg)[0])
-                           if status(s, cfg)[0] in ("blocked", "network") else 2,
-                           -s.last_activity),
+            key=lambda s: -s.last_activity,
         )[:cfg["max_sessions"]]
         worst = "green"
         blocked = 0
@@ -73,7 +87,8 @@ def main():
         title = "⚠️" if errors else EMOJI[worst]
         app.title = title + (f"🙋{blocked}" if blocked else "")
         app.menu.clear()
-        app.menu = (items or [rumps.MenuItem("no active sessions", callback=_NOOP)]) + [None]
+        app.menu = (items or [rumps.MenuItem("no active sessions", callback=_NOOP)]) \
+            + [None, config_item(rumps, cfg), None]
 
     rumps.Timer(poll, cfg["poll_seconds"]).start()
     app.run()
