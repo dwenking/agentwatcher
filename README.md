@@ -64,7 +64,10 @@ First run creates `~/.config/agentwatcher/config.json`:
   "max_sessions": 10,         // show at most this many (blocked first, then most recent)
   "blocked_after_s": 120,     // in-flight turn silent this long -> blocked (🙋)
   "network_error_window_s": 300, // API errors within this window -> network state (🌐)
-  "claude_context_window": 200000,
+  "claude_context_windows": {        // Claude doesn't log its window; map per model
+    "default": 200000,
+    "claude-sonnet-5": 1000000
+  },
   "providers": {
     "claude_code": { "enabled": true, "glob": "~/.claude/projects/*/*.jsonl" },
     "codex": {

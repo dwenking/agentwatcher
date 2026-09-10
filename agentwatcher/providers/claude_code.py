@@ -73,7 +73,10 @@ def scan(state, cfg):
                     "cache_creation_input_tokens", "output_tokens"))
                 if used:
                     s.tokens_used = used
-                    s.context_window = cfg["claude_context_window"]
+                    # window isn't logged; per-model map (old flat key honored)
+                    wins = cfg.get("claude_context_windows") or {
+                        "default": cfg.get("claude_context_window", 200000)}
+                    s.context_window = wins.get(s.model, wins.get("default", 200000))
             s.events.append({"type": t, "ts": iso_ts(ts)})
             s.last_activity = max(s.last_activity, iso_ts(ts))
         s.latencies = pair_latencies(s.events)
