@@ -142,7 +142,8 @@ def main():
                 errors.append(f"{name}: {e}")
         cutoff = time.time() - history_s
         live = sorted(
-            (s for s in found if s.last_activity >= cutoff and not s.hidden),
+            (s for s in found
+             if s.last_activity >= cutoff and not s.hidden and display_name(s)),
             key=lambda s: -s.last_activity,
         )[:cfg["max_sessions"]]
         worst = "green"
