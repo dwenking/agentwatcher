@@ -48,9 +48,11 @@ def scan(state, cfg):
                 if results:
                     for b in results:
                         s.pending_tools.pop(b.get("tool_use_id"), None)
-                else:
+                elif not (isinstance(content, str) and content.lstrip().startswith("<")):
                     # a fresh human prompt starts a turn and supersedes any
-                    # tools left dangling by an interrupted one
+                    # tools left dangling by an interrupted one; "<"-prefixed
+                    # strings are local slash-command records (/compact etc.)
+                    # that never get an assistant reply
                     s.in_flight = True
                     s.pending_tools.clear()
                 s.title = prompt_snippet(content) or s.title

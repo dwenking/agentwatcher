@@ -90,6 +90,22 @@ def test_status_detection():
     assert core.status(s2, cfg, now) == ("blocked", "waiting on AskUserQuestion")
 
 
+def test_local_command_records_do_not_start_a_turn():
+    # /compact etc. log a user record but never get an assistant reply;
+    # they must not leave the session stuck in_flight (false 🙋).
+    import json, tempfile
+    from agentwatcher.providers import claude_code
+    cfg = dict(CFG, history_hours=48, network_error_window_s=300,
+               providers={"claude_code": {"glob": ""}})
+    with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False) as f:
+        f.write(json.dumps({"type": "user", "timestamp": "2026-09-10T00:00:00Z",
+                            "message": {"content": "<local-command-caveat>…</local-command-caveat>"}}) + "\n")
+        path = f.name
+    cfg["providers"]["claude_code"]["glob"] = path
+    (s,) = claude_code.scan({}, cfg)
+    assert not s.in_flight
+
+
 def test_rendering_helpers():
     assert core.sparkline([]) == ""
     assert core.sparkline([1, 4, 8]) == "▂▅█"
