@@ -83,11 +83,11 @@ def session_card(rumps, s, cfg):
         plain = "".join(t for t, _ in segments)
         item.add(_attr_item(rumps, segments, plain))
 
+    # fixed card shape: status always first, regardless of state
+    add(("status   ", "label"), (status_seg, "bold"),
+        (f" — {reason}" if reason else "", "dim"))
     if s.title and s.title != name:
         add(("last message   ", "label"), (f"“{s.title}”", "value"))
-    if st != "idle":
-        add(("status   ", "label"), (status_seg, "bold"),
-            (f" — {reason}" if reason else "", "dim"))
     info = " · ".join(x for x in (
         s.model, s.branch, f"{len(s.latencies)} turns" if s.latencies else "") if x)
     if info:
