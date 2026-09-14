@@ -32,7 +32,10 @@ def scan(state, cfg):
             if t == "queue-operation" and r.get("timestamp"):
                 s.last_activity = max(s.last_activity, iso_ts(r["timestamp"]))
                 continue
-            if r.get("isSidechain") or r.get("isMeta") or t not in ("user", "assistant"):
+            # isCompactSummary: /compact writes its summary as a user record
+            # that never gets an assistant reply — must not start a turn
+            if (r.get("isSidechain") or r.get("isMeta") or r.get("isCompactSummary")
+                    or t not in ("user", "assistant")):
                 continue
             ts = r.get("timestamp")
             if not ts:

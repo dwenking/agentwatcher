@@ -100,6 +100,10 @@ def test_local_command_records_do_not_start_a_turn():
     with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False) as f:
         f.write(json.dumps({"type": "user", "timestamp": "2026-09-10T00:00:00Z",
                             "message": {"content": "<local-command-caveat>…</local-command-caveat>"}}) + "\n")
+        # /compact also writes the summary as a user record with no assistant reply
+        f.write(json.dumps({"type": "user", "isCompactSummary": True,
+                            "timestamp": "2026-09-10T00:01:00Z",
+                            "message": {"content": "This session is being continued…"}}) + "\n")
         path = f.name
     cfg["providers"]["claude_code"]["glob"] = path
     (s,) = claude_code.scan({}, cfg)
