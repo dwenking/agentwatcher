@@ -60,11 +60,6 @@ def load_config():
     return cfg
 
 
-def save_config(cfg):
-    with open(CONFIG_PATH, "w") as f:
-        json.dump(cfg, f, indent=2)
-
-
 # --- health logic -------------------------------------------------------------
 
 def pair_latencies(events):

@@ -115,35 +115,16 @@ def session_card(rumps, s, cfg):
 
 
 def config_item(rumps, cfg):
-    import json
-
-    item = rumps.MenuItem("⚙️ Config (click a value to edit)", callback=_NOOP)
-
-    def editor(key):
-        def cb(_):
-            resp = rumps.Window(
-                f"New value for “{key}” (JSON):", "agentwatcher",
-                default_text=json.dumps(cfg[key]), dimensions=(280, 24),
-                cancel=True).run()
-            if not resp.clicked:
-                return
-            try:
-                cfg[key] = json.loads(resp.text)
-            except ValueError:
-                rumps.alert("agentwatcher", f"Not valid JSON: {resp.text}")
-                return
-            core.save_config(cfg)
-        return cb
-
+    # any click opens the config file itself — edit there, restart to apply
+    _open = lambda _: subprocess.call(["open", core.CONFIG_PATH])
+    item = rumps.MenuItem("⚙️ Config (click to edit file)", callback=_open)
     for k, v in cfg.items():
         if k == "providers":
             enabled = [n for n, p in v.items() if p.get("enabled", True)]
-            item.add(rumps.MenuItem(f"providers: {', '.join(enabled)}", callback=_NOOP))
+            item.add(rumps.MenuItem(f"providers: {', '.join(enabled)}", callback=_open))
         else:
-            item.add(rumps.MenuItem(f"{k}: {v}", callback=editor(k)))
-    item.add(rumps.MenuItem(
-        "Open config file… (globs/providers; restart to apply)",
-        callback=lambda _: subprocess.call(["open", core.CONFIG_PATH])))
+            item.add(rumps.MenuItem(f"{k}: {v}", callback=_open))
+    item.add(rumps.MenuItem("Open config file… (restart to apply)", callback=_open))
     return item
 
 
