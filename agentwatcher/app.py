@@ -83,25 +83,30 @@ def session_card(rumps, s, cfg):
         plain = "".join(t for t, _ in segments)
         item.add(_attr_item(rumps, segments, plain))
 
-    # fixed card shape: status always first, regardless of state
+    # fixed card shape: every card shows the same rows; "—" = no data yet
     add(("status   ", "label"), (status_seg, "bold"),
         (f" — {reason}" if reason else "", "dim"))
-    if s.title and s.title != name:
+    if s.title:
         add(("last message   ", "label"), (f"“{s.title}”", "value"))
+    else:
+        add(("last message   ", "label"), ("—", "dim"))
     info = " · ".join(x for x in (
         s.model, s.branch, f"{len(s.latencies)} turns" if s.latencies else "") if x)
-    if info:
-        add((info, "dim"))
+    add((info or "—", "dim"))
     if s.context_window:
         frac = min(s.tokens_used / s.context_window, 1.0)
         pct_style = "red" if frac >= 0.8 else "orange" if frac >= 0.6 else "green"
         bar, pct, detail = context_bar(s.tokens_used, s.context_window).split(" ", 2)
         add(("context  ", "label"), (bar + " ", "mono"), (pct, pct_style),
             (f" {detail}", "dim"))
+    else:
+        add(("context  ", "label"), ("—", "dim"))
     if s.latencies:
         med = statistics.median(s.latencies)
         add(("latency  ", "label"), (sparkline(s.latencies) + "  ", "mono"),
             (f"last {s.latencies[-1]:.0f}s", "bold"), (f" · med {med:.0f}s", "dim"))
+    else:
+        add(("latency  ", "label"), ("—", "dim"))
     n = strikes(s, cfg)
     cause = "slow turns" if s.use_latency_strikes else "errors/aborts"
     add(("strikes  ", "label"), (str(n), "red" if n else "green"),
