@@ -64,6 +64,9 @@ def scan(state, cfg):
                 msg = r.get("message", {})
                 if r.get("isApiErrorMessage"):
                     s.error_times.append(iso_ts(ts))
+                    txt = next((b.get("text", "") for b in msg.get("content") or []
+                                if isinstance(b, dict) and b.get("type") == "text"), "")
+                    s.last_error = txt[:160] or s.last_error
                 if msg.get("model") and msg["model"] != "<synthetic>":
                     s.model = msg["model"]
                 s.branch = r.get("gitBranch") or s.branch

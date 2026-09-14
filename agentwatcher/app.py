@@ -84,15 +84,15 @@ def session_card(rumps, s, cfg):
         item.add(_attr_item(rumps, segments, plain))
 
     # fixed card shape: every card shows the same rows; "—" = no data yet
+    info = " · ".join(x for x in (
+        s.branch, f"{len(s.latencies)} turns" if s.latencies else "") if x)
+    add((s.model or "—", "bold"), (f"  ·  {info}" if info else "", "dim"))
     add(("status   ", "label"), (status_seg, "bold"),
         (f" — {reason}" if reason else "", "dim"))
     if s.title:
         add(("last message   ", "label"), (f"“{s.title}”", "value"))
     else:
         add(("last message   ", "label"), ("—", "dim"))
-    info = " · ".join(x for x in (
-        s.model, s.branch, f"{len(s.latencies)} turns" if s.latencies else "") if x)
-    add((info or "—", "dim"))
     if s.context_window:
         frac = min(s.tokens_used / s.context_window, 1.0)
         pct_style = "red" if frac >= 0.8 else "orange" if frac >= 0.6 else "green"
@@ -115,15 +115,34 @@ def session_card(rumps, s, cfg):
 
 
 def config_item(rumps, cfg):
-    item = rumps.MenuItem("⚙️ Config", callback=_NOOP)
+    import json
+
+    item = rumps.MenuItem("⚙️ Config (click a value to edit)", callback=_NOOP)
+
+    def editor(key):
+        def cb(_):
+            resp = rumps.Window(
+                f"New value for “{key}” (JSON):", "agentwatcher",
+                default_text=json.dumps(cfg[key]), dimensions=(280, 24),
+                cancel=True).run()
+            if not resp.clicked:
+                return
+            try:
+                cfg[key] = json.loads(resp.text)
+            except ValueError:
+                rumps.alert("agentwatcher", f"Not valid JSON: {resp.text}")
+                return
+            core.save_config(cfg)
+        return cb
+
     for k, v in cfg.items():
         if k == "providers":
             enabled = [n for n, p in v.items() if p.get("enabled", True)]
             item.add(rumps.MenuItem(f"providers: {', '.join(enabled)}", callback=_NOOP))
         else:
-            item.add(rumps.MenuItem(f"{k}: {v}", callback=_NOOP))
+            item.add(rumps.MenuItem(f"{k}: {v}", callback=editor(k)))
     item.add(rumps.MenuItem(
-        "Edit config file… (restart to apply)",
+        "Open config file… (globs/providers; restart to apply)",
         callback=lambda _: subprocess.call(["open", core.CONFIG_PATH])))
     return item
 

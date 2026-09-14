@@ -36,6 +36,7 @@ class Session:
     in_flight: bool = False
     pending_tools: dict = field(default_factory=dict)  # tool_use_id -> tool name
     net_error_count: int = 0  # recent API/network errors, set fresh each scan
+    last_error: str = ""   # text of the most recent API/network error
     error_times: list = field(default_factory=list)
     offset: int = 0
     events: list = field(default_factory=list)
@@ -57,6 +58,11 @@ def load_config():
         else:
             cfg[k] = v
     return cfg
+
+
+def save_config(cfg):
+    with open(CONFIG_PATH, "w") as f:
+        json.dump(cfg, f, indent=2)
 
 
 # --- health logic -------------------------------------------------------------
@@ -107,15 +113,17 @@ def status(s, cfg, now=None):
     now = time.time() if now is None else now
     waiting = [n for n in s.pending_tools.values() if n in INTERACTIVE_TOOLS]
     if waiting:
-        return "blocked", f"waiting on {waiting[0]}"
+        return "blocked", f"{waiting[0]} pending — answer it in the session"
     if s.net_error_count:
-        return "network", f"{s.net_error_count} API errors/retries recently"
+        detail = f": “{s.last_error}”" if s.last_error else ""
+        return "network", f"{s.net_error_count} API errors/retries{detail}"
     if s.in_flight or s.pending_tools:
         gap = now - s.last_activity
         if gap > 3600:  # a turn silent this long is dead (killed session), not waiting
             return "idle", ""
         if gap > cfg["blocked_after_s"]:
-            return "blocked", f"stalled {age_str(s.last_activity)} — approval needed?"
+            return "blocked", (f"no reply for {age_str(s.last_activity)} — check the "
+                               "session for a permission prompt or stalled tool")
         return "thinking", ""
     return "idle", ""
 

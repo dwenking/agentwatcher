@@ -119,8 +119,11 @@ def _add_db_errors(active, pcfg):
     for s, uuid in active:
         if not uuid:
             continue
-        mine = [(lv, tg) for lv, tg, body in rows if f"thread_id={uuid}" in (body or "")]
-        errors = sum(1 for lv, _ in mine if lv == "ERROR")
-        retries = sum(1 for _, tg in mine if tg == "codex_core::responses_retry")
+        mine = [(lv, tg, body) for lv, tg, body in rows if f"thread_id={uuid}" in (body or "")]
+        errors = sum(1 for lv, _, _ in mine if lv == "ERROR")
+        retries = sum(1 for _, tg, _ in mine if tg == "codex_core::responses_retry")
+        bodies = [b for lv, _, b in mine if lv == "ERROR" and b]
+        if bodies:
+            s.last_error = bodies[-1][:160]
         s.net_error_count = errors + retries
         s.external_strikes += errors
